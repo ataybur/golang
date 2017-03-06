@@ -6,6 +6,7 @@ import (
     "log"
     "os"
     "regexp"
+    "strconv"
 )
 
 var REGEX_1 = "There is a ([a-zA-Z ]+) at position ([0-9]+)"
@@ -25,8 +26,8 @@ func logErr(err error) {
 }
 
 type Character struct {
-    hp int
-    attackPoint int
+     hp int
+     attackPoint int
 }
 
 type Hero struct {
@@ -82,9 +83,51 @@ func parseLine(line string) ([]string,string) {
 }
 
 func fillContext(info []string, regex string, context *Context){
-     if regex == REGEX_3 {
-        fmt.Println("range_m")
-        fmt.Println(info[1])
+     fmt.Println()
+     fmt.Println(regex)
+     if regex == REGEX_1 {
+        enemy := info[1]
+        position := info[2]
+        fmt.Printf("%q %q\n",enemy, position)
+     } else if regex == REGEX_2 {
+        character := info[1]
+        attackPoint := info[2]
+        fmt.Printf("%q %q\n", character, attackPoint)
+     } else if regex == REGEX_3 {
+        fmt.Printf("%q\n",info[1])
+     } else if regex == REGEX_4 {
+        character := info[1]
+        hp := info[2]
+        hpInt, err := strconv.Atoi(hp)
+        if err == nil {
+          hpInt = 0
+        }
+        fmt.Printf("%q %q\n", character,hp)
+        if character == "Hero" {
+           herotemp := context.hero
+           if (Hero{}) == herotemp {
+              herotemp = Hero{Character{hp:hpInt}}
+           } else {
+              herotemp.hp = hpInt
+           }
+           context.hero = herotemp
+        } else {
+           enemytemp ,err := context.enemy_map[character]
+           if !err {
+              enemytemp = Enemy{}
+           }
+           enemytemp.species = character
+           enemytemp.hp = hpInt
+        }
+     } else if regex == REGEX_5 {
+        species := info[1]
+        fmt.Printf("%q %q\n",species)
+        enemytemp,err := context.enemy_map[species]
+        if !err {
+           enemytemp = Enemy{}
+        }
+        enemytemp.species = species
+        context.enemy_map[species] = enemytemp
      }
 }
 
@@ -96,7 +139,6 @@ func main() {
     scanner := bufio.NewScanner(file)
     for scanner.Scan() {
 	line := scanner.Text()
-        fmt.Println(line)
         info, regex := parseLine(line)
         fillContext(info, regex, context)
     }
