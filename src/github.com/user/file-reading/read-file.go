@@ -171,12 +171,12 @@ func fillContext(info []string, regex string, context *Context) {
 	}
 }
 
-func fight(hero Hero, enemy Enemy) bool {
+func fight(hero *Hero, enemy Enemy) bool {
 	result := false
-	heroHP := hero.hp
 	heroAttackP := hero.attackPoint
 	enemyAttackP := enemy.attackPoint
 	enemyHP := enemy.hp
+	heroHP := hero.hp
 	remains := enemyHP % heroAttackP
 	if remains != 0 {
 		remains -= heroAttackP
@@ -224,7 +224,7 @@ func main() {
 		if ok {
 			enemy2, ok2 := context.enemy_map[enemy.species]
 			if ok2 {
-				isHeroAlive = fight(context.hero, enemy2)
+				isHeroAlive = fight(&context.hero, enemy2)
 				if !isHeroAlive {
 					lastIndex = i
 					break
