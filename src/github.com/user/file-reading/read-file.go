@@ -23,6 +23,8 @@ const (
 	CONST_5  = "Hero is Dead!! Last seen at position %d!!" + END_LINE
 )
 
+var REGEX_ARR = [5]string{REGEX_1, REGEX_2, REGEX_3, REGEX_4, REGEX_5}
+
 func logErr(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -37,6 +39,8 @@ type Character struct {
 type Hero struct {
 	Character
 }
+
+type reg_func_interface func([]string, string, *Context)
 
 type Enemy struct {
 	Character
@@ -54,121 +58,125 @@ type Context struct {
 	enemy_map map[string]Enemy
 }
 
-func isStringMatches(line, regex string) bool {
+func isStringMatches(line, regex string) []string {
 	r, err := regexp.Compile(regex)
 	logErr(err)
 	result := r.FindStringSubmatch(line)
-	return len(result) != 0
-}
-
-func whichRegexIsAppropiate(line string) string {
-	result := ""
-	if isStringMatches(line, REGEX_1) {
-		result = REGEX_1
-	} else if isStringMatches(line, REGEX_2) {
-		result = REGEX_2
-	} else if isStringMatches(line, REGEX_3) {
-		result = REGEX_3
-	} else if isStringMatches(line, REGEX_4) {
-		result = REGEX_4
-	} else if isStringMatches(line, REGEX_5) {
-		result = REGEX_5
-	}
 	return result
 }
 
-func parseLine(line string) ([]string, string) {
-	regex := whichRegexIsAppropiate(line)
-	r, err := regexp.Compile(regex)
-	logErr(err)
-	result := r.FindStringSubmatch(line)
+func whichRegexIsAppropiate(line string) (string, []string) {
+	result := ""
+	var line_result []string
+	for _, REGEX := range REGEX_ARR {
+		line_result = isStringMatches(line, REGEX)
+		if len(line_result) != 0 {
+			result = REGEX
+		}
+	}
 	fmt.Println(result)
-	return result, regex
+	fmt.Println(line_result)
+	return result, line_result
+}
+
+func reg1(info []string, regex string, context *Context) {
+	enemy := info[1]
+	position := info[2]
+	positionInt, err := strconv.Atoi(position)
+	if err != nil {
+		positionInt = 0
+	}
+	if len(context.enemy_map) == 0 {
+		context.enemy_map = make(map[string]Enemy)
+	}
+	enemytemp, err2 := context.enemy_map[enemy]
+	if err2 {
+		enemytemp = Enemy{}
+	}
+	enemytemp.species = enemy
+	if len(context.field.enemy_map) == 0 {
+		context.field.enemy_map = make(map[int]Enemy)
+	}
+	context.field.enemy_map[positionInt] = enemytemp
+	fmt.Printf("%q %q\n", enemy, position)
+}
+func reg2(info []string, regex string, context *Context) {
+	character := info[1]
+	attackPoint := info[2]
+	fmt.Printf("%q %q\n", character, attackPoint)
+	attackPointInt, err := strconv.Atoi(info[2])
+	if err != nil {
+		attackPointInt = 0
+	}
+	if character == "Hero" {
+		context.hero.attackPoint = attackPointInt
+	} else {
+		enemyTemp := context.enemy_map[character]
+		enemyTemp.attackPoint = attackPointInt
+		context.enemy_map[character] = enemyTemp
+	}
+}
+func reg3(info []string, regex string, context *Context) {
+	fmt.Printf("%q\n", info[1])
+	rangeInt, err := strconv.Atoi(info[1])
+	if err != nil {
+		rangeInt = 0
+	}
+	context.field.range_m = rangeInt
+}
+func reg4(info []string, regex string, context *Context) {
+	character := info[1]
+	hp := info[2]
+	hpInt, err := strconv.Atoi(hp)
+	if err != nil {
+		hpInt = 0
+	}
+	fmt.Printf("%q %q\n", character, hp)
+	if character == "Hero" {
+		herotemp := context.hero
+		if (Hero{}) == herotemp {
+			herotemp = Hero{Character{hp: hpInt}}
+		} else {
+			herotemp.hp = hpInt
+		}
+		context.hero = herotemp
+	} else {
+		enemytemp, ok := context.enemy_map[character]
+		if !ok {
+			enemytemp = Enemy{}
+		}
+		enemytemp.species = character
+		enemytemp.hp = hpInt
+		context.enemy_map[character] = enemytemp
+	}
+}
+func reg5(info []string, regex string, context *Context) {
+	species := info[1]
+	fmt.Printf("%q\n", species)
+	if len(context.enemy_map) == 0 {
+		context.enemy_map = make(map[string]Enemy)
+	}
+	enemytemp, ok := context.enemy_map[species]
+	if !ok {
+		enemytemp = Enemy{}
+	}
+	enemytemp.species = species
+	context.enemy_map[species] = enemytemp
+}
+
+var func_map = map[string]reg_func_interface{
+	REGEX_1: reg1,
+	REGEX_2: reg2,
+	REGEX_3: reg3,
+	REGEX_4: reg4,
+	REGEX_5: reg5,
 }
 
 func fillContext(info []string, regex string, context *Context) {
 	fmt.Println()
 	fmt.Println(regex)
-	if regex == REGEX_1 {
-		enemy := info[1]
-		position := info[2]
-		positionInt, err := strconv.Atoi(position)
-		if err != nil {
-			positionInt = 0
-		}
-		if len(context.enemy_map) == 0 {
-			context.enemy_map = make(map[string]Enemy)
-		}
-		enemytemp, err2 := context.enemy_map[enemy]
-		if err2 {
-			enemytemp = Enemy{}
-		}
-		enemytemp.species = enemy
-		if len(context.field.enemy_map) == 0 {
-			context.field.enemy_map = make(map[int]Enemy)
-		}
-		context.field.enemy_map[positionInt] = enemytemp
-		fmt.Printf("%q %q\n", enemy, position)
-	} else if regex == REGEX_2 {
-		character := info[1]
-		attackPoint := info[2]
-		fmt.Printf("%q %q\n", character, attackPoint)
-		attackPointInt, err := strconv.Atoi(info[2])
-		if err != nil {
-			attackPointInt = 0
-		}
-		if character == "Hero" {
-			context.hero.attackPoint = attackPointInt
-		} else {
-			enemyTemp := context.enemy_map[character]
-			enemyTemp.attackPoint = attackPointInt
-			context.enemy_map[character] = enemyTemp
-		}
-	} else if regex == REGEX_3 {
-		fmt.Printf("%q\n", info[1])
-		rangeInt, err := strconv.Atoi(info[1])
-		if err != nil {
-			rangeInt = 0
-		}
-		context.field.range_m = rangeInt
-	} else if regex == REGEX_4 {
-		character := info[1]
-		hp := info[2]
-		hpInt, err := strconv.Atoi(hp)
-		if err != nil {
-			hpInt = 0
-		}
-		fmt.Printf("%q %q\n", character, hp)
-		if character == "Hero" {
-			herotemp := context.hero
-			if (Hero{}) == herotemp {
-				herotemp = Hero{Character{hp: hpInt}}
-			} else {
-				herotemp.hp = hpInt
-			}
-			context.hero = herotemp
-		} else {
-			enemytemp, ok := context.enemy_map[character]
-			if !ok {
-				enemytemp = Enemy{}
-			}
-			enemytemp.species = character
-			enemytemp.hp = hpInt
-			context.enemy_map[character] = enemytemp
-		}
-	} else if regex == REGEX_5 {
-		species := info[1]
-		fmt.Printf("%q\n", species)
-		if len(context.enemy_map) == 0 {
-			context.enemy_map = make(map[string]Enemy)
-		}
-		enemytemp, ok := context.enemy_map[species]
-		if !ok {
-			enemytemp = Enemy{}
-		}
-		enemytemp.species = species
-		context.enemy_map[species] = enemytemp
-	}
+	reg_funct := func_map[regex]
+	reg_funct(info, regex, context)
 }
 
 func fight(hero *Hero, enemy Enemy) bool {
@@ -211,7 +219,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		info, regex := parseLine(line)
+		regex, info := whichRegexIsAppropiate(line)
 		fillContext(info, regex, context)
 	}
 	field := context.field
