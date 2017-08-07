@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -72,10 +73,12 @@ func whichRegexIsAppropiate(line string) (string, []string) {
 		line_result = isStringMatches(line, REGEX)
 		if len(line_result) != 0 {
 			result = REGEX
+			break
 		}
 	}
-	fmt.Println(result)
-	fmt.Println(line_result)
+	fmt.Println("1: " + result)
+	line_result_log := strings.Join(line_result, "")
+	fmt.Println("2: " + line_result_log)
 	return result, line_result
 }
 
@@ -210,7 +213,11 @@ func fight(hero *Hero, enemy Enemy) bool {
 	}
 	return result
 }
-
+func heroFighter(hero *Hero) func(enemy Enemy) bool {
+	return func(enemy Enemy) bool {
+		return fight(hero, enemy)
+	}
+}
 func main() {
 	file, err := os.Open("/home/ataybur/go-workspace/src/github.com/user/file-reading/lines")
 	logErr(err)
@@ -227,12 +234,13 @@ func main() {
 	fmt.Printf(CONST_1, context.hero.hp)
 	fmt.Printf("Range is %d"+END_LINE, field.range_m)
 	var lastIndex int
+	fighter := heroFighter(&context.hero)
 	for i := 1; i <= field.range_m; i++ {
 		enemy, ok := field.enemy_map[i]
 		if ok {
 			enemy2, ok2 := context.enemy_map[enemy.species]
 			if ok2 {
-				isHeroAlive = fight(&context.hero, enemy2)
+				isHeroAlive = fighter(enemy2)
 				if !isHeroAlive {
 					lastIndex = i
 					break
